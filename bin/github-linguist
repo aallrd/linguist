@@ -7,21 +7,35 @@ require 'rugged'
 require 'json'
 require 'optparse'
 
-path = ARGV[0] || Dir.pwd
-
 # special case if not given a directory
-# but still given the --breakdown or --json options/
-if path == "--breakdown"
+# but still given the an option
+if ['--breakdown', '--json', '--max-tree-size'].include? ARGV[0]
   path = Dir.pwd
-  breakdown = true
-elsif path == "--json"
-  path = Dir.pwd
-  json_breakdown = true
+else
+  path = ARGV[0] || Dir.pwd
 end
 
-ARGV.shift
-breakdown = true if ARGV[0] == "--breakdown"
-json_breakdown = true if ARGV[0] == "--json"
+# The default supported maximum tree size
+MAX_TREE_SIZE = 100_000
+
+while opt = ARGV.shift do
+  puts case opt
+    when "--breakdown"
+      breakdown = true
+    when "--json"
+      json_breakdown = true
+    when "--max-tree-size"
+      begin
+        max_tree_size = Integer(ARGV.shift)
+        puts "Max tree size value overridden: #{max_tree_size}"
+      rescue TypeError
+        puts "The --max-tree-size parameter expects an Integer value."
+        abort
+      end
+  end
+end
+
+max_tree_size = MAX_TREE_SIZE if max_tree_size.nil?
 
 if File.directory?(path)
   rugged = Rugged::Repository.new(path)
@@ -89,9 +103,10 @@ else
   abort <<-HELP
   Linguist v#{Linguist::VERSION}
   Detect language type for a file, or, given a repository, determine language breakdown.
+  Default max tree size: #{MAX_TREE_SIZE} files
 
   Usage: linguist <path>
          linguist <path> [--breakdown] [--json]
-         linguist [--breakdown] [--json]
+         linguist [--breakdown] [--json] [--max-tree-size {VALUE}]
   HELP
 end

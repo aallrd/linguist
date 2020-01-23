@@ -9,6 +9,8 @@ require 'json'
 require 'tempfile'
 require 'zlib'
 
+DEFAULT_MAX_TREE_SIZE = 100_000
+
 class GitLinguist
   def initialize(path, commit_oid, incremental = true)
     @repo_path = path
@@ -20,7 +22,7 @@ class GitLinguist
     if @commit_oid.nil?
       raise "git-linguist must be called with a specific commit OID to perform language computation"
     end
-    repo = Linguist::Repository.new(rugged, @commit_oid)
+    repo = Linguist::Repository.new(rugged, @commit_oid, DEFAULT_MAX_TREE_SIZE)
 
     if @incremental && stats = load_language_stats
       old_commit_oid, old_stats = stats

@@ -12,8 +12,8 @@ module Linguist
 
     # Public: Create a new Repository based on the stats of
     # an existing one
-    def self.incremental(repo, commit_oid, old_commit_oid, old_stats)
-      repo = self.new(repo, commit_oid)
+    def self.incremental(repo, commit_oid, old_commit_oid, old_stats, max_tree_size)
+      repo = self.new(repo, commit_oid, max_tree_size)
       repo.load_existing_stats(old_commit_oid, old_stats)
       repo
     end
@@ -24,11 +24,13 @@ module Linguist
     # repo - a Rugged::Repository object
     # commit_oid - the sha1 of the commit that will be analyzed;
     #              this is usually the master branch
+    # max_tree_size - the maximum tree size to handle
     #
     # Returns a Repository
-    def initialize(repo, commit_oid)
+    def initialize(repo, commit_oid, max_tree_size)
       @repository = repo
       @commit_oid = commit_oid
+      @max_tree_size = max_tree_size
 
       @old_commit_oid = nil
       @old_stats = nil
@@ -113,7 +115,7 @@ module Linguist
         if @old_commit_oid == @commit_oid
           @old_stats
         else
-          compute_stats(@old_commit_oid, @old_stats)
+          compute_stats(@old_commit_oid, @old_stats, @max_tree_size)
         end
       end
     end
@@ -128,11 +130,11 @@ module Linguist
       @tree ||= Rugged::Commit.lookup(repository, @commit_oid).tree
     end
 
-    protected
-    MAX_TREE_SIZE = 100_000
-
-    def compute_stats(old_commit_oid, cache = nil)
-      return {} if current_tree.count_recursive(MAX_TREE_SIZE) >= MAX_TREE_SIZE
+    def compute_stats(old_commit_oid, cache = nil, max_tree_size)
+      if current_tree.count_recursive(max_tree_size) >= max_tree_size
+        puts "Your repo tree size exceeds the max_tree_size limit: #{max_tree_size}"
+        return {}
+      end
 
       old_tree = old_commit_oid && Rugged::Commit.lookup(repository, old_commit_oid).tree
       read_index

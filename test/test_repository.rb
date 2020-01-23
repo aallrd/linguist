@@ -9,8 +9,12 @@ class TestRepository < Minitest::Test
     '7dbcffcf982e766fc711e633322de848f2b60ba5'
   end
 
-  def linguist_repo(oid = master_oid)
-    Linguist::Repository.new(rugged_repository, oid)
+  def max_tree_size
+    100_000
+  end
+
+  def linguist_repo(oid = master_oid, mts = max_tree_size)
+    Linguist::Repository.new(rugged_repository, oid, mts)
   end
 
   def test_linguist_language
@@ -80,7 +84,7 @@ class TestRepository < Minitest::Test
     # With some .gitattributes data
     attr_commit = '7ee006cbcb2d7261f9e648510a684ee9ac64126b'
     # It's incremental but should bust the cache
-    new_repo = Linguist::Repository.incremental(rugged_repository, attr_commit, old_commit, old_repo.cache)
+    new_repo = Linguist::Repository.incremental(rugged_repository, attr_commit, old_commit, old_repo.cache, max_tree_size)
 
     assert new_repo.breakdown_by_file["Java"].include?("lib/linguist.rb")
   end
